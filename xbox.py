@@ -2,7 +2,7 @@ import pygame
 import zmq
 import time
 
-IP = '192.168.1.34'
+IP = '10.0.0.3'
 
 c = zmq.Context()
 s = c.socket(zmq.REQ)
@@ -36,4 +36,4 @@ while goon:
     
     s.send_json(req)
     a = s.recv_json()
-    time.sleep(0.1)
+    time.sleep(0.05)
