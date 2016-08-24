@@ -2,49 +2,6 @@ import pigpio
 import zmq
 import time
 
-IP = '0.0.0.0'
-port = '8000'
-dt = 1
-lock = True
-mockup = True
-
-c = zmq.Context()
-s = c.socket(zmq.REP)
-s.bind("tcp://"+IP+":"+port)
-
-# ouverture des GPIO
-pi = pigpio.pi()
-
-while True:
-    try:
-        if lock == False:
-            reply = s.recv_json()
-            if reply.has_key("pad"):
-                pad = reply["pad"]
-                # pour le thrustmaster
-                # thr = (-pad["thrust"]+1)*1000
-                # yaw = pad["stickYaw"]*50
-                # pour la xbox
-                thr = 1000*(abs(pad["thrust"])+1)
-                yaw = pad["stickYaw"]*50
-                set_thrust([thr+yaw,thr+yaw,thr-yaw,thr-yaw],pi,mockup)
-                if pad["Back"] == 1:
-                    lock = True
-            else:
-                set_thrust([1000,1000,1000,1000],pi,mockup)
-            
-        else:
-            set_thrust([1000,1000,1000,1000],pi,mockup)
-            reply = s.recv_json()
-            if reply.has_key("pad"):
-                pad = reply["pad"]
-                if pad["Start"] == 1:
-                    lock = False
-    except:
-        set_thrust([1000,1000,1000,1000],pi,mockup)
-
-    time.sleep(dt)
-
 def set_thrust(thrust,pi,mockup):
     # limitation
     if len(thrust)==4:
@@ -65,3 +22,48 @@ def set_thrust(thrust,pi,mockup):
         pi.set_servo_pulsewidth(19, thrust[1])
         pi.set_servo_pulsewidth(13, thrust[2])
         pi.set_servo_pulsewidth( 6, thrust[3])
+
+IP = '0.0.0.0'
+port = '8000'
+dt = 0.05
+lock = True
+mockup = False
+
+c = zmq.Context()
+s = c.socket(zmq.REP)
+s.bind("tcp://"+IP+":"+port)
+
+# ouverture des GPIO
+pi = pigpio.pi()
+
+while True:
+    if lock == False:
+        reply = s.recv_json()
+        if reply.has_key("pad"):
+            pad = reply["pad"]
+            # pour le thrustmaster
+            # thr = (-pad["thrust"]+1)*1000
+            # yaw = pad["stickYaw"]*50
+            # pour la xbox
+            thr = 1000*(abs(pad["thrust"])+1)
+            yaw = pad["stickYaw"]*50
+            set_thrust([thr+yaw,thr+yaw,thr-yaw,thr-yaw],pi,mockup)
+            if pad["Back"] == 1:
+                print "LOCKED!"
+                lock = True
+        else:
+            set_thrust([1000,1000,1000,1000],pi,mockup)
+        s.send_json({})
+        
+    else:
+        set_thrust([1000,1000,1000,1000],pi,mockup)
+        reply = s.recv_json()
+        if reply.has_key("pad"):
+            pad = reply["pad"]
+            if pad["Start"] == 1:
+                print "UNLOCKED!"
+                lock = False
+        s.send_json({})
+
+    time.sleep(dt)
+
