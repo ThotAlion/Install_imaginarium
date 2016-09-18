@@ -39,20 +39,26 @@ class vision(Thread):
             nline = 0
             if not(lines is None):
                 for rho,theta in lines[0]:
-                    sumangle = sumangle + theta
-                    nline = nline + 1
-                    #print theta.size
-                    # a = np.cos(theta)
-                    # b = np.sin(theta)
-                    # x0 = a*rho
-                    # y0 = b*rho
-                    # x1 = int(x0 + 1000*(-b))
-                    # y1 = int(y0 + 1000*(a))
-                    # x2 = int(x0 - 1000*(-b))
-                    # y2 = int(y0 - 1000*(a))
-                self.anglemoy = (sumangle/nline)*180/np.pi
+                    # filter almost vertical lines
+                    theta = (theta*180/np.pi)-90
+                    if abs(theta)<45:
+                        sumangle = sumangle + theta
+                        nline = nline + 1
+                        a = np.cos(theta*np.pi/180)
+                        b = np.sin(theta*np.pi/180)
+                        x0 = a*rho
+                        y0 = b*rho
+                        x1 = int(x0 + 1000*(-b))
+                        y1 = int(y0 + 1000*(a))
+                        x2 = int(x0 - 1000*(-b))
+                        y2 = int(y0 - 1000*(a))
+                        cv2.line(image,(x1,y1),(x2,y2),(0,0,255),2)
+                if nline>0:
+                    self.anglemoy = sumangle/nline
                 print self.anglemoy
+            cv2.imshow("Frame", image)
             time.sleep(0.1)
+            key = cv2.waitKey(1) & 0xFF
             self.rawCapture.truncate(0)
             if self.go_on == False:
                 break
